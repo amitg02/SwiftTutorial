@@ -266,11 +266,123 @@ public class BinarySearchTree<T:Comparable> {
 		right?.traversePostOrder(process)
 		process(value)
 	}
-//	public func map(@noescape formula: T -> T) -> [T] {
-//		var a = [T]()
-//		if let left = left { a += left.map(formula) }
-//		//a.append((formula(value)))
-//	}
+	public func map(@noescape formula:T -> T) -> [T] {
+		var a = [T]()
+		if let left = left { a += left.map(formula) }
+		a.append(formula(value))
+		if let right = right { a += right.map(formula) }
+		return a
+	}
+	public func toArray() -> [T] {
+		return map {$0}
+	}
+	private func reconnectParentToNode(node:BinarySearchTree?) {
+		if let parent = parent {
+			if isLeftChild {
+			parent.left = node
+		} else {
+			parent.right = node
+		}
+	   }
+		node?.parent = parent
+	}
+	public func minimum() -> BinarySearchTree {
+		var node = self
+		while case let next? = node.left {
+			node = next
+		}
+		return node
+	}
+	public func maximum() -> BinarySearchTree {
+		var node = self
+		while case let next? = node.right {
+			node = next
+		}
+		return node
+	}
+	public func remove() -> BinarySearchTree? {
+		let replacement: BinarySearchTree?
+		if let left = left {
+			if let right = right {
+				replacement = removeNodeWithTwoChildren(left,right: right)
+			} else{
+				replacement = left
+			}
+		} else if let right = right {
+			replacement = right
+		} else {
+			replacement = nil
+		}
+		reconnectParentToNode(replacement)
+		parent = nil
+		left = nil
+		right = nil
+		return replacement
+	}
+	
+	private func removeNodeWithTwoChildren(left:BinarySearchTree,right:BinarySearchTree) -> BinarySearchTree {
+		let successor = right.minimum()
+		successor.remove()
+		
+		successor.left = left
+		left.parent = successor
+		
+		if right !== successor {
+			successor.right = right
+			right.parent = successor
+		} else {
+			successor.right = nil
+		}
+		return successor
+	}
+	public func height() -> Int {
+		if isLeaf {
+			return 0
+		} else {
+			return 1 + max(left?.height() ?? 0, right?.height() ?? 0)
+		}
+	}
+	public func depth() -> Int {
+		var node = self
+		var edges = 0
+		while case let parent? = node.parent {
+			node = parent
+			edges += 1
+		}
+		return edges
+	}
+	public func predecessor() -> BinarySearchTree<T>? {
+		if let left = left {
+			return left.maximum()
+		} else {
+			var node = self
+			while case let parent? = node.parent {
+				if parent.value < value { return parent}
+				node = parent
+			}
+			return nil
+		}
+	}
+	
+	public func successor() -> BinarySearchTree<T>? {
+	if let right = right {
+	return right.minimum()
+	} else {
+		var node = self
+		while case let parent? = node.parent {
+			if parent.value > value { return parent }
+			node = parent
+		}
+		return nil
+		}
+	}
+	public func isBST(minValue minValue: T, maxValue: T) -> Bool {
+		if value < minValue || value > maxValue { return false }
+		let leftBST = left?.isBST(minValue: minValue, maxValue: value) ?? true
+		let rightBST = right?.isBST(minValue: value, maxValue: maxValue) ?? true
+		return leftBST && rightBST
+	}
+	
 	
 }
 extension BinarySearchTree: CustomStringConvertible {
@@ -303,5 +415,25 @@ tree.search(7)
 tree.search(6)
 
 tree.traverseInOrder { value in print(value)}
+tree.toArray()
 
+if let node2 = tree.search(2) {
+	print(tree)     // before
+	node2.remove()
+	print(tree)     // after
+}
+
+//tree.remove()
+
+tree.height()
+
+if let node9 = tree.search(9) {
+	node9.depth()   // returns 2
+}
+if let node1 = tree.search(1) {
+	tree.isBST(minValue: Int.min, maxValue: Int.max)  // true
+	node1.insert(100)                                 // EVIL!!!
+	tree.search(100)                                  // nil
+	tree.isBST(minValue: Int.min, maxValue: Int.max)  // false
+}
 
